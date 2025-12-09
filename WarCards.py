@@ -9,16 +9,16 @@ class Deck:
         self.total_deck = []
         self.num_split = 2
         self.temp_deck = []
-        self.houses = ["Hearts", "Diamonds", "Spades", "Clubs"]
+        self.suits = ["Hearts", "Diamonds", "Spades", "Clubs"]
         
     #Generating the deck
     def generating_cards(self):
         # Number cards 2-10
         for num in range(2, 11):
-            for suit in self.houses:
+            for suit in self.suits:
                 self.temp_deck.append([num, str(num), suit])
         # Face cards
-        for suit in self.houses:
+        for suit in self.suits:
             self.temp_deck.append([11, "Jack", suit])
             self.temp_deck.append([12, "Queen", suit])
             self.temp_deck.append([13, "King", suit])
@@ -54,17 +54,13 @@ class Player:
 #Rounds
 #Basic Round and Special Round (War!)
 class Round:
-    #Initializing player hands
-    def __init__(self, p1_hand, p2_hand, spoils, p1_name="", p2_name=""):
+    def __init__(self,p1_hand, p2_hand, p1_name, p2_name):
         self.p1_hand = p1_hand
         self.p2_hand = p2_hand
         self.p1_name = p1_name
         self.p2_name = p2_name
-        self.spoils = []
-    #Basic Round functionality
     def basic_round(self):
         if len(self.p1_hand) == 0 or len(self.p2_hand) == 0:
-            print("A player has run out of cards. Ending round.")
             return self.p1_hand, self.p2_hand
         p1_card = self.p1_hand.pop(0)
         p2_card = self.p2_hand.pop(0)
@@ -79,49 +75,49 @@ class Round:
             return self.p1_hand, self.p2_hand
         else:
             print("Both players' card have the same value: time for War!")
-            if (len(self.p1_hand) < 4):
-                print("Player 1 does not have enough cards to go to war\n Player 2 wins!")
-                return self.p1_hand, self.p2_hand
-            elif (len(self.p2_hand) < 4):
-                print("Player 2 does not have enough cards to go to war\n Player 1 wins!")
-                return self.p1_hand, self.p2_hand
-            else:
-                #self.p1_hand.extend([p1_card])
-                #self.p2_hand.extend([p2_card])
-                self.spoils.extend([p1_card, p2_card])
-            return self.war_round(self.p1_hand, self.p2_hand)
-    #Special Round (War!) functionality
-    def war_round(self, p1_hand, p2_hand):
-        p1_warpile = []
-        p2_warpile = []
-        count = 3
-        while count > 0:
-            card1 = p1_hand.pop(0)
-            card2 = p2_hand.pop(0)
-            p1_warpile.append(card1)
-            p2_warpile.append(card2)
-            count-=1
-        p1_warcard = p1_hand.pop(0)
-        p2_warcard = p2_hand.pop(0)
-        print(f"{self.p1_name}'s war card: {p1_warcard}\n{self.p2_name}'s war card: {p2_warcard}")
-        if p1_warcard[0] > p2_warcard[0]:
-            print(f"{self.p1_name} wins the round")
-            self.p1_hand.extend(self.spoils + p1_warpile + [p1_warcard] + p2_warpile + [p2_warcard])
-            self.spoils.clear()
+            spoils = [p1_card, p2_card]
+            return self.war_round(spoils)
+    def war_round(self, current_spoils):
+        if len(self.p1_hand) < 4:
+            print("Player 1 does not have enough cards to go to war\n Player 2 wins!")
+            self.p2_hand.extend(current_spoils)
+            self.p2_hand.extend(self.p1_hand)
+            self.p1_hand.clear()
             return self.p1_hand, self.p2_hand
-        elif p2_warcard[0] > p1_warcard[0]:
-            print(f"{self.p2_name} wins the round")
-            self.p2_hand.extend(self.spoils + p2_warpile + [p2_warcard] + p1_warpile + [p1_warcard])
-            self.spoils.clear()
-            return self.p1_hand, self.p2_hand
-        else:
-            print("Both players' war card have the same value: time for another War!")
-            temp = p1_warpile + [p1_warcard] + p2_warpile + [p2_warcard]
-            self.spoils.extend(temp)
-            return self.war_round(p1_hand, p2_hand)
-            
 
+        elif len(self.p2_hand) < 4:
+            print("Player 2 does not have enough cards to go to war\n Player 1 wins!")
+            self.p1_hand.extend(current_spoils)
+            self.p1_hand.extend(self.p2_hand)
+            self.p2_hand.clear()
+            return self.p1_hand, self.p2_hand
+
+        for i in range(3):
+            current_spoils.append(self.p1_hand.pop(0))
+            current_spoils.append(self.p2_hand.pop(0))
+
+        p1_war_card = self.p1_hand.pop(0)
+        p2_war_card = self.p2_hand.pop(0)
+
+        current_spoils.append(p1_war_card)
+        current_spoils.append(p2_war_card)
+
+        # 3. Compare War cards
+        if p1_war_card[0] > p2_war_card[0]:
+            self.award_spoils(self.p1_hand, current_spoils)
+            return self.p1_hand, self.p2_hand
+
+        if p2_war_card[0] > p1_war_card[0]:
+            self.award_spoils(self.p2_hand, current_spoils)
+            return self.p1_hand, self.p2_hand
+
+        return self.war_round(current_spoils)
+
+    def award_spoils(self, winner_hand, spoils):
+        for card in spoils:
+            winner_hand.append(card)
         
+        return
             
 #Main function to run the game
 def main():
@@ -139,7 +135,7 @@ def main():
     if game_begins.upper().strip() == "YES":
         print("Let's play!")
         while len(player1.get_hand()) > 0 and len(player2.get_hand()) > 0:
-            current_round = Round(player1.get_hand().copy(), player2.get_hand().copy(), [], name1, name2)
+            current_round = Round(player1.get_hand(), player2.get_hand(), name1, name2)
             current_round.basic_round()
             player1.update_hand(current_round.p1_hand)
             player2.update_hand(current_round.p2_hand)
